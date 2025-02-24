@@ -6,6 +6,7 @@
 // @author       kloob
 // @match        https://www.gaiaonline.com/moddog/report/view/*
 // @grant        none
+// @enabled      true
 // ==/UserScript==
 
 

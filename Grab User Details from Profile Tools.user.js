@@ -6,6 +6,7 @@
 // @author       kloobert @ gaia
 // @match        https://www.gaiaonline.com/admin/user/mod/*
 // @grant        GM_setClipboard
+// @enabled      true
 // ==/UserScript==
 
 (function() {
