@@ -164,11 +164,17 @@ function updateTrackedIPs(ip, isAdding, alias = '') {
     refreshTrackedIPsList(); // Refresh the list whenever an update is made
 }
 
-
-// Refresh tracked IPs list in UI
+// comment
 function refreshTrackedIPsList() {
     const list = document.getElementById('tracked-ips-list');
-    list.innerHTML = '';
+
+    // Check if the element exists before modifying it
+    if (!list) {
+        console.error("Error: Element #tracked-ips-list not found.");
+        return; // Exit function to prevent error
+    }
+
+    list.innerHTML = ''; // Safe to modify now
 
     let trackedIPs = JSON.parse(localStorage.getItem('trackedIPs'));
 
@@ -192,6 +198,7 @@ function refreshTrackedIPsList() {
         list.appendChild(entry);
     });
 }
+
 
 function addButtonNextToIP() {
     window.addEventListener('load', () => {

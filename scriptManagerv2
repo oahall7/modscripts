@@ -1,0 +1,142 @@
+// ==UserScript==
+// @name         Gaia Online Mod Script Loader
+// @namespace    http://example.com/
+// @version      2.3
+// @description  Mod Script Manager - use one script instead of twelve bajillion.
+// @match        *://www.gaiaonline.com/*
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_registerMenuCommand
+// @grant        GM_addElement
+// @grant        GM_setClipboard
+// ==/UserScript==
+
+// ✅ Ensure GM functions are available
+if (typeof GM_setValue === "undefined") {
+    console.warn("⚠ GM functions not available, falling back...");
+    if (typeof unsafeWindow !== "undefined") {
+        window.GM_setValue = unsafeWindow.GM_setValue;
+        window.GM_getValue = unsafeWindow.GM_getValue;
+        window.GM_setClipboard = unsafeWindow.GM_setClipboard;
+    } else {
+        console.error("🚨 GM functions are unavailable. Your userscript manager may not support them.");
+    }
+}
+
+// ✅ Define Fallback for `GM_setClipboard`
+if (typeof GM_setClipboard === "undefined") {
+    console.warn("⚠ GM_setClipboard is not available. Defining a fallback...");
+    window.GM_setClipboard = function (text) {
+        console.warn("⚠ Using fallback clipboard method.");
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        console.log("✅ Copied using fallback method.");
+    };
+}
+
+// ✅ Define scripts with correct match patterns
+const scripts = {
+    "Copy Reportee Details": {
+        url: "https://cdn.jsdelivr.net/gh/oahall7/modscripts@main/Copy%20Reportee%20Details%20from%20Moddog.user.js",
+        match: "^https://www\.gaiaonline\.com/moddog/report/view/[0-9]+/"
+    },
+    "Grab User Details from Profile Tools": {
+        url: "https://cdn.jsdelivr.net/gh/oahall7/modscripts@main/Grab%20User%20Details%20from%20Profile%20Tools.user.js",
+        match: "^https:\\/\\/www\\.gaiaonline\\.com\\/(profile|admin\\/user\\/mod)\\/"
+    },
+    "Break Image BBCode": {
+        url: "https://cdn.jsdelivr.net/gh/oahall7/modscripts@main/Break%20Image%20BBCode%20Tags.user.js",
+        match: "^https://www.gaiaonline.com/forum/compose/entry/new/[0-9]+/"
+    },
+    "Generate Report List of Report URLs": {
+        url: "https://cdn.jsdelivr.net/gh/oahall7/modscripts@main/Extract%20GaiaOnline%20Report%20IDs.user.js",
+        match: "^https://www\.gaiaonline\.com/moddog/report/area/[0-9]+/\?offender=[0-9]+"
+    },
+    "New Account Search": {
+        url: "https://cdn.jsdelivr.net/gh/oahall7/modscripts@main/Find%20New%20Accounts%20-%20Experimental%20Search.user.js",
+        match: "^https://www.gaiaonline.com/moddog/"
+    }
+};
+
+// ✅ Load stored scripts (ensure default object if empty)
+let enabledScripts = GM_getValue("enabledScripts", {});
+if (typeof enabledScripts !== "object" || enabledScripts === null) {
+    console.warn("⚠ Corrupt storage detected, resetting...");
+    enabledScripts = {};
+    GM_setValue("enabledScripts", enabledScripts);
+}
+
+// ✅ Toggle Script Loading
+function toggleScript(name, scriptData) {
+    let savedScripts = GM_getValue("enabledScripts", {});
+
+    if (savedScripts[name]) {
+        console.log(`[Script Loader] Disabling script: ${name}`);
+        delete savedScripts[name];
+        alert(`${name} disabled`);
+    } else {
+        console.log(`[Script Loader] Enabling script: ${name}`);
+        savedScripts[name] = {
+            url: scriptData.url,
+            match: scriptData.match
+        };
+        alert(`${name} enabled`);
+    }
+
+    // ✅ Force save
+    GM_setValue("enabledScripts", savedScripts);
+    console.log("[Script Loader] Updated enabled scripts:", savedScripts);
+    location.reload();
+}
+
+// ✅ Register Menu Options
+for (const [name, scriptData] of Object.entries(scripts)) {
+    GM_registerMenuCommand(name, () => toggleScript(name, scriptData));
+    console.log(`[Script Loader] Menu registered for: ${name}`);
+}
+
+// ✅ Inject Scripts if They Match the Page
+const currentURL = window.location.href;
+console.log("[Script Loader] Current page URL:", currentURL);
+console.log("[Script Loader] Enabled scripts:", enabledScripts);
+
+for (const [name, scriptData] of Object.entries(enabledScripts)) {
+    try {
+        console.log(`[Script Loader] Checking script: ${name}`);
+
+        const regex = new RegExp(scriptData.match);
+        console.log(`[Script Loader] Testing ${currentURL} against ${regex}`);
+
+        if (regex.test(currentURL)) {
+            console.log(`[Script Loader] ✅ Match found! Injecting script: ${name}`);
+
+            // ✅ Override GM_setClipboard Before Injection
+            const overrideScript = document.createElement("script");
+            overrideScript.textContent = `
+                if (typeof GM_setClipboard === "undefined") {
+                    window.GM_setClipboard = function (text) {
+                        const textarea = document.createElement("textarea");
+                        textarea.value = text;
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textarea);
+                        console.log("✅ Copied using fallback method.");
+                    };
+                }
+            `;
+            document.head.appendChild(overrideScript);
+
+            // ✅ Inject the actual script
+            GM_addElement("script", { src: scriptData.url, type: "text/javascript" });
+        } else {
+            console.log(`[Script Loader] ❌ No match for: ${name}`);
+        }
+    } catch (error) {
+        console.error(`[Script Loader] ❌ Error processing script: ${name}`, error);
+    }
+}
